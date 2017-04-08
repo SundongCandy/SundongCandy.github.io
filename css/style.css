@@ -716,3 +716,12 @@ textarea {
 	-webkit-transform: scale(1);
 	transform: scale(1);
 }
+.table-center {
+	margin:0px auto;
+}
+.table-item-left {
+	text-align: left;
+}
+.table-item-right {
+	text-align: right;
+}
