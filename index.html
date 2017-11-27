@@ -23,13 +23,138 @@
       top: 0;
       color: #fff;
     }
+    #blocker {
+
+      position: absolute;
+
+      width: 100%;
+      height: 100%;
+
+      background-color: rgba(0,0,0,0.5);
+
+    }
+
+    #instructions {
+
+      width: 100%;
+      height: 100%;
+
+      display: -webkit-box;
+      display: -moz-box;
+      display: box;
+
+      -webkit-box-orient: horizontal;
+      -moz-box-orient: horizontal;
+      box-orient: horizontal;
+
+      -webkit-box-pack: center;
+      -moz-box-pack: center;
+      box-pack: center;
+
+      -webkit-box-align: center;
+      -moz-box-align: center;
+      box-align: center;
+
+      color: #ffffff;
+      text-align: center;
+
+      cursor: pointer;
+
+    }
   </style>
 </head>
 <body>
   <script src="three.min.js"></script>
   <script src="OrbitControls.js"></script>
   <script type="text/javascript" src="helvetiker_regular.typeface.json"></script>
+  <script src="PointerLockControls.js"></script>
+
+  <div id="blocker">
+
+    <div id="instructions">
+      <span style="font-size:40px">Click to play</span>
+      <br />
+      (W, A, S, D = Move, SPACE = Jump, MOUSE = Look around)
+    </div>
+
+  </div>
+
   <script>
+var scene, camera, renderer;
+var objects = [];
+var controls;
+var raycaster;
+var blocker = document.getElementById( 'blocker' );
+var instructions = document.getElementById( 'instructions' );
+
+var havePointerLock = 'pointerLockElement' in document || 'mozPointerLockElement' in document || 'webkitPointerLockElement' in document;
+
+if ( havePointerLock ) {
+
+    var element = document.body;
+
+    var pointerlockchange = function ( event ) {
+
+        if ( document.pointerLockElement === element || document.mozPointerLockElement === element || document.webkitPointerLockElement === element ) {
+
+            controlsEnabled = true;
+            controls.enabled = true;
+
+            blocker.style.display = 'none';
+
+        } else {
+
+            controls.enabled = false;
+
+            blocker.style.display = 'block';
+
+            instructions.style.display = '';
+
+        }
+
+    };
+
+    var pointerlockerror = function ( event ) {
+
+        instructions.style.display = '';
+
+    };
+
+    // Hook pointer lock state change events
+    document.addEventListener( 'pointerlockchange', pointerlockchange, false );
+    document.addEventListener( 'mozpointerlockchange', pointerlockchange, false );
+    document.addEventListener( 'webkitpointerlockchange', pointerlockchange, false );
+
+    document.addEventListener( 'pointerlockerror', pointerlockerror, false );
+    document.addEventListener( 'mozpointerlockerror', pointerlockerror, false );
+    document.addEventListener( 'webkitpointerlockerror', pointerlockerror, false );
+
+    instructions.addEventListener( 'click', function ( event ) {
+
+        instructions.style.display = 'none';
+
+        // Ask the browser to lock the pointer
+        element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
+        element.requestPointerLock();
+
+    }, false );
+
+} else {
+
+    instructions.innerHTML = 'Your browser doesn\'t seem to support Pointer Lock API';
+}
+
+var controlsEnabled = false;
+
+var moveForward = false;
+var moveBackward = false;
+var moveLeft = false;
+var moveRight = false;
+var canJump = false;
+
+var prevTime = performance.now();
+var velocity = new THREE.Vector3();
+var direction = new THREE.Vector3();
 
 
 var PhotoFrame = function(woodMaterial, pictureMaterial, timeStamp, scaleFactor, frameType) {
@@ -135,6 +260,17 @@ var PhotoFrame = function(woodMaterial, pictureMaterial, timeStamp, scaleFactor,
       mainThis.add(fontMesh);
     });
 
+    var pointLight = new THREE.PointLight(0xffffee, 1, 200, 2);
+    pointLight.castShadow = true;
+    pointLight.position.set(40 * scaleFactor, 80 * scaleFactor, 0 * scaleFactor);
+    this.add(pointLight);
+
+    // light
+    var lightGeometry = new THREE.SphereGeometry(5, 32, 32);
+    var lightMaterial = new THREE.MeshBasicMaterial( {color: 0xffffee} );
+    var lightMesh = new THREE.Mesh( lightGeometry, lightMaterial );
+    lightMesh.position.set(40 * scaleFactor, 80 * scaleFactor, 0 * scaleFactor);
+    this.add( lightMesh );
 }
 PhotoFrame.prototype = Object.create(THREE.Group.prototype);
 PhotoFrame.prototype.constructor = PhotoFrame;
@@ -143,103 +279,10 @@ PhotoFrame.prototype.updatePosition = function() {
 };
 
 
-
-// Create a scene which will hold all our meshes to be rendered
-var scene = new THREE.Scene();
-
-// Create and position a camera
-var camera = new THREE.PerspectiveCamera(
-    70,                                   // Field of view
-    window.innerWidth/window.innerHeight, // Aspect ratio
-    0.1,                                  // Near clipping pane
-    1000                                  // Far clipping pane
-);
-
-// Reposition the camera
-camera.position.set(-60,80,210);
-
-// Point the camera at a given coordinate
-camera.lookAt(new THREE.Vector3(0,80,0))
-
-// Create a renderer
-var renderer = new THREE.WebGLRenderer({ antialias: true });
-
-// Size should be the same as the window
-renderer.setSize( window.innerWidth, window.innerHeight );
-
-// Set a near white clear color (default is black)
-// renderer.setClearColor( 0xfff6e6 );
-renderer.setClearColor( 0x000000 );
-
-// Enable shadow mapping
-renderer.shadowMap.enabled = true;
-renderer.shadowMap.type = THREE.PCFSoftShadowMap;
-
-// Append to the document
-document.body.appendChild( renderer.domElement );
-
-// Add an ambient lights
-var ambientLight = new THREE.AmbientLight( 0xffffff, 0.1 );
-scene.add( ambientLight );
-
-// Add a point light that will cast shadows
-var pointLight = new THREE.PointLight( 0xffffff,.8 );
-pointLight.position.set( 80, 160, 120 );
-pointLight.castShadow = true;
-pointLight.shadow.mapSize.width = 1024;
-pointLight.shadow.mapSize.height = 1024;
-//scene.add( pointLight );
-
-var loader = new THREE.TextureLoader();
-var groundTexture = loader.load( 'images/floor.jpg', function ( texture ) {
-    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.offset.set( 0, 0 );
-    texture.repeat.set( 20, 20 );
-} );
-var shadowMaterial = new THREE.MeshPhongMaterial( { map: groundTexture } );
-// shadowMaterial.opacity = 0.8;
-var groundMesh = new THREE.Mesh(
-    new THREE.BoxGeometry( 1000, .1, 1000 ),
-    shadowMaterial
-);
-groundMesh.receiveShadow = true;
-scene.add( groundMesh );
-
-var loader2 = new THREE.TextureLoader();
-var groundTexture2 = loader2.load( 'images/carpet.jpg', function ( texture ) {
-    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
-    texture.offset.set( 0, 0 );
-    texture.repeat.set( 1, 5 );
-} );
-var roadMaterial = new THREE.MeshPhongMaterial( { map: groundTexture2 } );
-// roadMaterial.opacity = 0.8;
-
-var roadMesh1 = new THREE.Mesh(
-    new THREE.BoxGeometry( 100, .3, 471.405 ),
-    roadMaterial
-);
-roadMesh1.rotateY(Math.PI / 4);
-roadMesh1.position.z += 333.333;
-roadMesh1.receiveShadow = true;
-scene.add( roadMesh1 );
-
-var roadMesh2 = new THREE.Mesh(
-    new THREE.BoxGeometry( 100, .3, 471.405 ),
-    roadMaterial
-);
-roadMesh2.rotateY(- Math.PI / 4);
-roadMesh2.position.x -= 70.711;
-roadMesh2.receiveShadow = true;
-scene.add( roadMesh2 );
-
-var roadMesh3 = new THREE.Mesh(
-    new THREE.BoxGeometry( 100, .3, 471.405 ),
-    roadMaterial
-);
-roadMesh3.rotateY(Math.PI / 4);
-roadMesh3.position.z -= 333.333;
-roadMesh3.receiveShadow = true;
-scene.add( roadMesh3 );
+init();
+initLights();
+initGround();
+initRoad();
 
 
 // A photo frame on top
@@ -251,6 +294,7 @@ photoFrame.rotateY(Math.PI * 3.5  / 4);
 photoFrame.position.x += 90;
 photoFrame.position.y += 4.5;
 scene.add(photoFrame);
+objects.push(photoFrame);
 
 var photoFrame2 = new PhotoFrame(woodMaterial, pictureMaterial2, '2017.11.17');
 photoFrame2.rotateY( Math.PI * 0.88 / 4);
@@ -258,34 +302,154 @@ photoFrame2.rotateY(- Math.PI / 2);
 photoFrame2.position.y += 4.5;
 photoFrame2.position.x -= 200;
 scene.add(photoFrame2);
+objects.push(photoFrame2);
 
 
 
 
 // Add an orbit control which allows us to move around the scene. See the three.js example for more details
 // https://github.com/mrdoob/three.js/blob/dev/examples/js/controls/OrbitControls.
-var controls = new THREE.OrbitControls( camera, renderer.domElement );
-controls.target = new THREE.Vector3(0,80,0);
-controls.maxPolarAngle = Math.PI / 2;
-controls.minDistance = 100;
-controls.maxDistance = 220;
+//var controls_test = new THREE.OrbitControls( camera, renderer.domElement );
+//controls_test.target = new THREE.Vector3(0,80,0);
+//controls_test.maxPolarAngle = Math.PI / 2;
+//controls_test.minDistance = 100;
+//controls_test.maxDistance = 220;
+
+controls = new THREE.PointerLockControls( camera );
+scene.add( controls.getObject() );
 
 requestAnimationFrame(render);
 
+function firstpersonControl()
+{
+    if ( controlsEnabled === true ) {
+
+        raycaster.ray.origin.copy( controls.getObject().position );
+        raycaster.ray.origin.y -= 10;
+
+        var intersections = raycaster.intersectObjects( objects );
+
+        var onObject = intersections.length > 0;
+
+        var time = performance.now();
+        var delta = ( time - prevTime ) / 1000;
+
+        velocity.x -= velocity.x * 10.0 * delta;
+        velocity.z -= velocity.z * 10.0 * delta;
+
+        velocity.y -= 9.8 * 100.0 * delta; // 100.0 = mass
+
+        direction.z = Number( moveForward ) - Number( moveBackward );
+        direction.x = Number( moveLeft ) - Number( moveRight );
+        direction.normalize(); // this ensures consistent movements in all directions
+
+        if ( moveForward || moveBackward ) velocity.z -= direction.z * 400.0 * delta;
+        if ( moveLeft || moveRight ) velocity.x -= direction.x * 400.0 * delta;
+
+        if ( onObject === true ) {
+
+            velocity.y = Math.max( 0, velocity.y );
+            canJump = true;
+
+        }
+
+        controls.getObject().translateX( velocity.x * delta );
+        controls.getObject().translateY( velocity.y * delta );
+        controls.getObject().translateZ( velocity.z * delta );
+
+        if ( controls.getObject().position.y < 10 ) {
+
+            velocity.y = 0;
+            controls.getObject().position.y = 10;
+
+            canJump = true;
+
+        }
+
+        prevTime = time;
+
+    }
+}
+
 function render() {
-    controls.update();
+    //controls_test.update();
 
     // Update animated elements
     // tree.updatePosition();
     photoFrame.updatePosition();
 
+    //fistpersoncontrol detection
+    firstpersonControl();
+
     // Render the scene/camera combnation
     renderer.render(scene, camera);
-
-    // Repeat...
     requestAnimationFrame(render);
 }
 
+var onKeyDown = function ( event ) {
+
+    switch ( event.keyCode ) {
+
+        case 38: // up
+        case 87: // w
+            moveForward = true;
+            break;
+
+        case 37: // left
+        case 65: // a
+            moveLeft = true; break;
+
+        case 40: // down
+        case 83: // s
+            moveBackward = true;
+            break;
+
+        case 39: // right
+        case 68: // d
+            moveRight = true;
+            break;
+
+        case 32: // space
+            if ( canJump === true ) velocity.y += 350;
+            canJump = false;
+            break;
+
+    }
+
+};
+
+var onKeyUp = function ( event ) {
+
+    switch( event.keyCode ) {
+
+        case 38: // up
+        case 87: // w
+            moveForward = false;
+            break;
+
+        case 37: // left
+        case 65: // a
+            moveLeft = false;
+            break;
+
+        case 40: // down
+        case 83: // s
+            moveBackward = false;
+            break;
+
+        case 39: // right
+        case 68: // d
+            moveRight = false;
+            break;
+
+    }
+
+};
+
+document.addEventListener( 'keydown', onKeyDown, false );
+document.addEventListener( 'keyup', onKeyUp, false );
+
+raycaster = new THREE.Raycaster( new THREE.Vector3(), new THREE.Vector3( 0, - 1, 0 ), 0, 10 );
 /**
  * Helper function to add random noise to geometry vertixes
  *
@@ -335,8 +499,146 @@ function loadTexture(texture, fileRoute) {
   });
 }
 
+function addSpotLight(){
+  var pointColor = "#ffffee";
+  var spotLight = new THREE.SpotLight(pointColor);
+  spotLight.position.set(0, 100, 0);
+  spotLight.castShadow = true;
+  spotLight.shadowCameraNear = 1;
+  spotLight.shadowCameraFar = 400;
+  spotLight.shadowCameraFov = 30;
 
 
+  var target = new THREE.Object3D();
+  target.position = new THREE.Vector3(0, 0, 0);
+  scene.add(target);
+  spotLight.target = target;
+  spotLight.distance = 400;
+  spotLight.angle = 0.1;
+  // spotLight.shadowCameraVisible = true;
+
+  // light
+  var lightGeometry = new THREE.SphereGeometry(5, 32, 32);
+  var lightMaterial = new THREE.MeshBasicMaterial( {color: 0xffffee} );
+  var lightMesh = new THREE.Mesh( lightGeometry, lightMaterial );
+  lightMesh.position.set(0, 100, 0);
+  scene.add( lightMesh );
+
+  return spotLight;
+}
+
+function init(){
+  // Create a scene which will hold all our meshes to be rendered
+  scene = new THREE.Scene();
+  //scene.fog = new THREE.Fog( 0xffffff, 0, 750 );
+
+  // Create and position a camera
+  camera = new THREE.PerspectiveCamera(
+    75,                                   // Field of view
+    window.innerWidth/window.innerHeight, // Aspect ratio
+    0.1,                                  // Near clipping pane
+    1000                                  // Far clipping pane
+    );
+
+  // Reposition the camera
+  camera.position.set(10,30,20);
+
+  // Point the camera at a given coordinate
+  camera.lookAt(new THREE.Vector3(0,0,0));
+
+  // Create a renderer
+  renderer = new THREE.WebGLRenderer({ antialias: true });
+
+  // Size should be the same as the window
+  renderer.setSize( window.innerWidth, window.innerHeight );
+
+  // Set a near white clear color (default is black)
+  // renderer.setClearColor( 0xfff6e6 );
+  renderer.setClearColor( 0x000000 );
+
+  // Enable shadow mapping
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+  // Append to the document
+  document.body.appendChild( renderer.domElement );
+  var element = document.body;
+    element.requestPointerLock = element.requestPointerLock || element.mozRequestPointerLock || element.webkitRequestPointerLock;
+    element.requestPointerLock();
+}
+
+function initLights(){
+  // Add an ambient lights
+  var ambientLight = new THREE.AmbientLight( 0xffffff, 0.1 );
+  scene.add( ambientLight );
+
+  // Add a point light that will cast shadows
+  // var pointLight = new THREE.PointLight( 0xffffff,.8 );
+  // pointLight.position.set( 80, 160, 120 );
+  // pointLight.castShadow = true;
+  // pointLight.shadow.mapSize.width = 1024;
+  // pointLight.shadow.mapSize.height = 1024;
+  //scene.add( pointLight );
+
+  var spotLight = addSpotLight();
+
+  scene.add(spotLight);
+}
+
+function initGround(){
+  var loader = new THREE.TextureLoader();
+  var groundTexture = loader.load( 'images/floor.jpg', function ( texture ) {
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.offset.set( 0, 0 );
+    texture.repeat.set( 20, 20 );
+  } );
+  var shadowMaterial = new THREE.MeshPhongMaterial( { map: groundTexture } );
+  // shadowMaterial.opacity = 0.8;
+  var groundMesh = new THREE.Mesh(
+    new THREE.BoxGeometry( 1000, .1, 1000 ),
+    shadowMaterial
+    );
+  groundMesh.receiveShadow = true;
+  scene.add( groundMesh );
+}
+
+function initRoad(){
+  var loader2 = new THREE.TextureLoader();
+  var groundTexture2 = loader2.load( 'images/carpet.jpg', function ( texture ) {
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.offset.set( 0, 0 );
+    texture.repeat.set( 1, 5 );
+  } );
+  var roadMaterial = new THREE.MeshPhongMaterial( { map: groundTexture2 } );
+  // roadMaterial.opacity = 0.8;
+
+  var roadMesh1 = new THREE.Mesh(
+    new THREE.BoxGeometry( 100, .3, 471.405 ),
+    roadMaterial
+    );
+  roadMesh1.rotateY(Math.PI / 4);
+  roadMesh1.position.z += 333.333;
+  roadMesh1.receiveShadow = true;
+  scene.add( roadMesh1 );
+
+  var roadMesh2 = new THREE.Mesh(
+    new THREE.BoxGeometry( 100, .3, 471.405 ),
+    roadMaterial
+    );
+  roadMesh2.rotateY(- Math.PI / 4);
+  roadMesh2.position.x -= 70.711;
+  roadMesh2.receiveShadow = true;
+  scene.add( roadMesh2 );
+
+  var roadMesh3 = new THREE.Mesh(
+    new THREE.BoxGeometry( 100, .3, 471.405 ),
+    roadMaterial
+    );
+  roadMesh3.rotateY(Math.PI / 4);
+  roadMesh3.position.z -= 333.333;
+  roadMesh3.receiveShadow = true;
+  scene.add( roadMesh3 );
+}
 
 
 
