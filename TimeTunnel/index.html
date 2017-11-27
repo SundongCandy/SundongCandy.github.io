@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Time Tunnel</title>
+  <style>
+    body { 
+      margin: 0; 
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #ddd;
+    }
+
+    canvas { 
+      width: 100%; 
+      height: 100%;
+    }
+
+    .label {
+      position: absolute;
+      width: 100%;
+      text-align: center;
+      top: 0;
+      color: #fff;
+    }
+  </style>
+</head>
+<body>
+  <script src="three.min.js"></script>
+  <script src="OrbitControls.js"></script>
+  <script type="text/javascript" src="helvetiker_regular.typeface.json"></script>
+  <script>
+
+
+var PhotoFrame = function(woodMaterial, pictureMaterial, timeStamp, scaleFactor, frameType) {
+
+    THREE.Group.apply(this, arguments);
+
+    scaleFactor = arguments[3] ? arguments[3] : 1;
+    frameType = arguments[4] ? arguments[4] : 0;
+    var geometry
+    if(frameType == 0){
+      geometry = new THREE.BoxGeometry(27, 9, 80);
+    }
+    else{
+      geometry = new THREE.BoxGeometry(46, 9, 80);
+    }
+     
+    var bottom = new THREE.Mesh(geometry, woodMaterial);
+    bottom.castShadow = true;
+    bottom.receiveShadow = true;
+    bottom.scale.set(scaleFactor, scaleFactor, scaleFactor);
+    this.add(bottom);
+
+    var geometry2 = new THREE.BoxGeometry(60, 9, 80);
+    var frame = new THREE.Mesh(geometry2, woodMaterial);
+    frame.castShadow = true;
+    frame.receiveShadow = true;
+    if(frameType == 0){
+      frame.rotateZ(Math.PI / 2);
+      frame.position.y += 34.5 * scaleFactor;
+    }
+    else{
+      frame.rotateZ(Math.PI * 2 / 3);
+      frame.position.x += 11.897 * scaleFactor;
+      frame.position.y += 23.731 * scaleFactor;
+    }
+    frame.scale.set(scaleFactor, scaleFactor, scaleFactor);
+    this.add(frame);
+
+    // var square = new THREE.Geometry();
+    // var v1 = new THREE.Vector3(-27,0,36);
+    // var v2 = new THREE.Vector3(27,0,36);
+    // var v3 = new THREE.Vector3(27,0,-36);
+    // var v4 = new THREE.Vector3(-27,0,-36);     
+    // square.vertices.push( v1 );
+    // square.vertices.push( v2 );
+    // square.vertices.push( v3 ); 
+    // square.vertices.push( v4 );
+    // square.faces.push( new THREE.Face3( 0, 3, 1 ) ); 
+    // square.faces.push( new THREE.Face3( 3, 2, 1 ) ); 
+
+    // var textureCoord = [new THREE.Vector2(0, 0), new THREE.Vector2(1, 0), new THREE.Vector2(1, 1), new THREE.Vector2(0, 1)];
+
+    // square.faceVertexUvs[0] = [];
+    // square.faceVertexUvs[0][0] = [ textureCoord[0], textureCoord[1], textureCoord[3] ];
+    // square.faceVertexUvs[0][1] = [ textureCoord[1], textureCoord[2], textureCoord[3] ];
+
+    var square2 = new THREE.BoxGeometry(72, 0.4, 54);
+    var picture = new THREE.Mesh(square2, pictureMaterial);
+    picture.castShadow = true;
+    picture.receiveShadow = true;
+    if(frameType == 0){
+      picture.rotateZ(- Math.PI / 2);
+      picture.rotateY(Math.PI / 2);
+      picture.position.x += 4.5 * scaleFactor;
+      picture.position.y += 34.5 * scaleFactor;
+    }
+    else{
+      picture.rotateZ(- Math.PI / 3);
+      picture.rotateY(Math.PI / 2);
+      picture.position.x += 15.794 * scaleFactor;
+      picture.position.y += 25.981 * scaleFactor;
+    }
+    picture.scale.set(scaleFactor, scaleFactor, scaleFactor);
+    this.add(picture);
+
+    var fontMaterial = new THREE.MeshPhongMaterial({    
+      color: 0xffff00,
+      specular:0xffff00,    
+      shininess:0
+    });
+    // load font
+    var fontLoader = new THREE.FontLoader();
+    var mainThis = this;
+    fontLoader.load('helvetiker_regular.typeface.json', function(font) {
+      var fontMesh = new THREE.Mesh(new THREE.TextGeometry(timeStamp, {
+        font: font,
+        size: 10 * scaleFactor,
+        height: 1
+      }), fontMaterial);
+      fontMesh.castShadow = true;
+      fontMesh.receiveShadow = true;
+      if(frameType == 0){
+        fontMesh.rotateY(Math.PI / 2);
+        fontMesh.position.x += 24.5 * scaleFactor;
+        fontMesh.position.z -= 42 * scaleFactor;
+      }
+      else{
+        fontMesh.rotateY(Math.PI / 2);
+        fontMesh.position.x += 34 * scaleFactor;
+        fontMesh.position.z -= 42 * scaleFactor;
+      }
+      
+      mainThis.add(fontMesh);
+    });
+
+}
+PhotoFrame.prototype = Object.create(THREE.Group.prototype);
+PhotoFrame.prototype.constructor = PhotoFrame;
+PhotoFrame.prototype.updatePosition = function() {
+    // this.rotateY(-0.005);
+};
+
+
+
+// Create a scene which will hold all our meshes to be rendered
+var scene = new THREE.Scene();
+
+// Create and position a camera
+var camera = new THREE.PerspectiveCamera(
+    70,                                   // Field of view
+    window.innerWidth/window.innerHeight, // Aspect ratio
+    0.1,                                  // Near clipping pane
+    1000                                  // Far clipping pane
+);
+
+// Reposition the camera
+camera.position.set(-60,80,210);
+
+// Point the camera at a given coordinate
+camera.lookAt(new THREE.Vector3(0,80,0))
+
+// Create a renderer
+var renderer = new THREE.WebGLRenderer({ antialias: true });
+
+// Size should be the same as the window
+renderer.setSize( window.innerWidth, window.innerHeight );
+
+// Set a near white clear color (default is black)
+// renderer.setClearColor( 0xfff6e6 );
+renderer.setClearColor( 0x000000 );
+
+// Enable shadow mapping
+renderer.shadowMap.enabled = true;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+
+// Append to the document
+document.body.appendChild( renderer.domElement );
+
+// Add an ambient lights
+var ambientLight = new THREE.AmbientLight( 0xffffff, 0.1 );
+scene.add( ambientLight );
+
+// Add a point light that will cast shadows
+var pointLight = new THREE.PointLight( 0xffffff,.8 );
+pointLight.position.set( 80, 160, 120 );
+pointLight.castShadow = true;
+pointLight.shadow.mapSize.width = 1024;
+pointLight.shadow.mapSize.height = 1024;
+//scene.add( pointLight );
+
+var loader = new THREE.TextureLoader();
+var groundTexture = loader.load( 'images/floor.jpg', function ( texture ) {
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.offset.set( 0, 0 );
+    texture.repeat.set( 20, 20 );
+} );
+var shadowMaterial = new THREE.MeshPhongMaterial( { map: groundTexture } );
+// shadowMaterial.opacity = 0.8;
+var groundMesh = new THREE.Mesh(
+    new THREE.BoxGeometry( 1000, .1, 1000 ),
+    shadowMaterial
+);
+groundMesh.receiveShadow = true;
+scene.add( groundMesh );
+
+var loader2 = new THREE.TextureLoader();
+var groundTexture2 = loader2.load( 'images/carpet.jpg', function ( texture ) {
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;
+    texture.offset.set( 0, 0 );
+    texture.repeat.set( 1, 5 );
+} );
+var roadMaterial = new THREE.MeshPhongMaterial( { map: groundTexture2 } );
+// roadMaterial.opacity = 0.8;
+
+var roadMesh1 = new THREE.Mesh(
+    new THREE.BoxGeometry( 100, .3, 471.405 ),
+    roadMaterial
+);
+roadMesh1.rotateY(Math.PI / 4);
+roadMesh1.position.z += 333.333;
+roadMesh1.receiveShadow = true;
+scene.add( roadMesh1 );
+
+var roadMesh2 = new THREE.Mesh(
+    new THREE.BoxGeometry( 100, .3, 471.405 ),
+    roadMaterial
+);
+roadMesh2.rotateY(- Math.PI / 4);
+roadMesh2.position.x -= 70.711;
+roadMesh2.receiveShadow = true;
+scene.add( roadMesh2 );
+
+var roadMesh3 = new THREE.Mesh(
+    new THREE.BoxGeometry( 100, .3, 471.405 ),
+    roadMaterial
+);
+roadMesh3.rotateY(Math.PI / 4);
+roadMesh3.position.z -= 333.333;
+roadMesh3.receiveShadow = true;
+scene.add( roadMesh3 );
+
+
+// A photo frame on top
+var woodMaterial = new THREE.MeshPhongMaterial( { map: THREE.ImageUtils.loadTexture('images/wood.jpg') } );
+var pictureMaterial = new THREE.MeshPhongMaterial( { map: THREE.ImageUtils.loadTexture('images/mayun.jpg') } );
+var pictureMaterial2 = new THREE.MeshPhongMaterial( { map: THREE.ImageUtils.loadTexture('images/mayun2.jpg') } );
+var photoFrame = new PhotoFrame(woodMaterial, pictureMaterial, '2017.11.20');
+photoFrame.rotateY(Math.PI * 3.5  / 4);
+photoFrame.position.x += 90;
+photoFrame.position.y += 4.5;
+scene.add(photoFrame);
+
+var photoFrame2 = new PhotoFrame(woodMaterial, pictureMaterial2, '2017.11.17');
+photoFrame2.rotateY( Math.PI * 0.88 / 4);
+photoFrame2.rotateY(- Math.PI / 2);
+photoFrame2.position.y += 4.5;
+photoFrame2.position.x -= 200;
+scene.add(photoFrame2);
+
+
+
+
+// Add an orbit control which allows us to move around the scene. See the three.js example for more details
+// https://github.com/mrdoob/three.js/blob/dev/examples/js/controls/OrbitControls.
+var controls = new THREE.OrbitControls( camera, renderer.domElement );
+controls.target = new THREE.Vector3(0,80,0);
+controls.maxPolarAngle = Math.PI / 2;
+controls.minDistance = 100;
+controls.maxDistance = 220;
+
+requestAnimationFrame(render);
+
+function render() {
+    controls.update();
+
+    // Update animated elements
+    // tree.updatePosition();
+    photoFrame.updatePosition();
+
+    // Render the scene/camera combnation
+    renderer.render(scene, camera);
+
+    // Repeat...
+    requestAnimationFrame(render);
+}
+
+/**
+ * Helper function to add random noise to geometry vertixes
+ *
+ * @param geometry The geometry to alter
+ * @param noiseX Amount of noise on the X axis
+ * @param noiseY Amount of noise on the Y axis
+ * @param noiseZ Amount of noise on the Z axis
+ * @returns the geometry object
+ */
+function addNoise(geometry, noiseX, noiseY, noiseZ) {
+
+    var noiseX = noiseX || 2;
+    var noiseY = noiseY || noiseX;
+    var noiseZ = noiseZ || noiseY;
+
+    for(var i = 0; i < geometry.vertices.length; i++){
+        var v = geometry.vertices[i];
+        v.x += -noiseX / 2 + Math.random() * noiseX;
+        v.y += -noiseY / 2 + Math.random() * noiseY;
+        v.z += -noiseZ / 2 + Math.random() * noiseZ;
+    }
+
+    return geometry;
+}
+
+function addShapeNoise(shapes, noiseX, noiseY) {
+
+    var noiseX = noiseX || 2;
+    var noiseY = noiseY || noiseX;
+
+    for(var i = 0; i < shapes.length; i++){
+        var v = shapes[i];
+        v.x += -noiseX / 2 + Math.random() * noiseX;
+        v.y += -noiseY / 2 + Math.random() * noiseY;
+        shapes[i] = v;
+    }
+
+    return shapes;
+}
+
+
+function loadTexture(texture, fileRoute) {
+  var textureLoader = new THREE.TextureLoader();
+  // textureLoader.crossOrigin = true;
+  texture = textureLoader.load(fileRoute, function(texture) {
+    texture.wrapS = texture.wrapT = THREE.RepeatWrapping;  
+  });
+}
+
+
+
+
+
+
+  </script>
+</body>
+</html>
